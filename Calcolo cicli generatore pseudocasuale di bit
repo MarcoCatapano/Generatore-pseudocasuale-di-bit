@@ -1,0 +1,47 @@
+for n = 2:19
+    per = periodi(n);
+    vals = unique(per);
+    occs = histc(per, vals);
+    
+    fprintf("\n%d bit:\n", n)
+    res = [vals; occs].'
+end
+
+
+
+function [res, lungh] = ciclo(n)    %n è il numero da cui partire, scritto come "01010101"
+    res = [];
+    lunghezza = strlength(n);
+    primo_numero = int64(bin2dec(n));
+    
+    res = [res, primo_numero];
+    digit_to_insert = bitxor(bitget(primo_numero, 1), bitget(primo_numero, 2));
+    last = bitset(primo_numero, lunghezza + 1, digit_to_insert, "int64");
+    last = bitshift(last, -1);
+    
+    while last ~= primo_numero
+        res = [res, last];
+        digit_to_insert = bitxor(bitget(last, 1), bitget(last, 2));
+        
+        last = bitset(last, lunghezza + 1, digit_to_insert, "int64");
+        last = bitshift(last, -1);
+    end
+    
+    lungh = length(res);
+end
+
+
+function [num_periodi] = periodi(n)    %n è il numero di bit, restituisce tutti i cicli
+    lista_numeri = int64(linspace(1, 2^n - 1, 2^n - 1));
+    num_periodi = [];
+    while ~isempty(lista_numeri)
+        %fprintf("\nMancano %d numeri\n", length(lista_numeri))
+
+        start_num = lista_numeri(1);
+        [stati, lungh] = ciclo(dec2bin(start_num, n));
+
+        num_periodi = [num_periodi, lungh];
+        lista_numeri = lista_numeri(~ismember(lista_numeri, stati));  
+    end 
+
+end
