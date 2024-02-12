@@ -1,0 +1,95 @@
+n = 21  %numero di bit
+check_until = 4;    %fino a che lunghezza di bit effettuare la verifica
+num_iniziale = join(repmat("1", 1, n), "");
+
+sequenza = dec2bin(ciclo(num_iniziale));
+lettura = ciclo_to_misura(sequenza);
+tested_sequences = strings(1,0);      %["0", "1", "00", "01", ...]
+occurences = [];
+for i = 1:check_until
+    lettura_circolare = strcat(lettura, lettura(1:i-1));
+    for j = 0:2^i-1%1     %2^i-1 con questo controlla tutti, con 0:1 controlla solo quelli che iniziano con tutti zeri
+        test_seq = dec2bin(j, i);   %e.g. i = 3, j = 1 testa 001
+        tested_sequences = [tested_sequences, test_seq];
+        occurences = [occurences, length(strfind(lettura_circolare, test_seq))];
+    end
+end
+%se occurences = [a,b,c,d], restituisce [b,a,d,c] per sommare i due vettori e ottenere la corretta normalizzazione
+swapped_occ = reshape([occurences(2:2:end); occurences(1:2:end)], 1, length(occurences));
+normalized_occurences = occurences ./ (swapped_occ + occurences) - .5;
+subplot(1,2,1)
+bar(tested_sequences(1:14), occurences(1:14))
+ylabel("Occorrenze")
+subplot(1,2,2)
+bar(tested_sequences(2:2:end), normalized_occurences(2:2:end))
+myfig = gcf; 
+myfig.Position(3:4) = [1200 600];
+exportgraphics(myfig, "randomicita_n21.pdf", ContentType= "vector");
+
+
+
+function [B] = next(A, k)
+    K = A;
+    for i = 1:k
+        K = [xor(K(end-1),K(end)), K(1:end-1)];
+    end 
+    B = K;
+end
+
+function [count] = conteggio(n)
+    start = ones(1, n);
+    C = next(start,1);
+    count = 1;
+
+    while ~isequal(start, C)
+        count = count + 1;
+        C = next(C,1);
+    end
+end
+
+
+function [res, lungh] = ciclo(n)    %n è il numero da cui partire, scritto come "01010101"
+    res = [];
+    lunghezza = strlength(n);
+    primo_numero = int64(bin2dec(n));
+    
+    res = [res, primo_numero];
+    digit_to_insert = bitxor(bitget(primo_numero, 1), bitget(primo_numero, 2));
+    last = bitset(primo_numero, lunghezza + 1, digit_to_insert, "int64");
+    last = bitshift(last, -1);
+    
+    while last ~= primo_numero
+        res = [res, last];
+        digit_to_insert = bitxor(bitget(last, 1), bitget(last, 2));
+        
+        last = bitset(last, lunghezza + 1, digit_to_insert, "int64");
+        last = bitshift(last, -1);
+    end
+    
+    lungh = length(res);
+end
+
+
+function [num_periodi] = periodi(n)    %n è il numero di bit, restituisce tutti i cicli
+    lista_numeri = int64(linspace(1, 2^n - 1, 2^n - 1));
+    num_periodi = [];
+    while ~isempty(lista_numeri)
+        %fprintf("\nMancano %d numeri\n", length(lista_numeri))
+
+        start_num = lista_numeri(1);
+        [stati, lungh] = ciclo(dec2bin(start_num, n));
+
+        num_periodi = [num_periodi, lungh];
+        lista_numeri = lista_numeri(~ismember(lista_numeri, stati));  
+    end 
+
+end
+
+
+function [lettura] = ciclo_to_misura(x) % e.g. x = ["11", "01", "10"]
+    lettura = [];
+    for i = 1:length(x)
+        num = x(i, :);
+        lettura = [lettura, num(end)];
+    end
+end
